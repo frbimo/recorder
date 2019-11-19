@@ -10,6 +10,7 @@ var (
 	mutex sync.Mutex
 )
 
+// FetchURL will fetch list target database url from ops database
 func FetchURL() (string, error) {
 
 	uri, ok := <-msg

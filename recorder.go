@@ -9,9 +9,11 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	_ "github.com/lib/pq"
 	osb "github.com/pmorie/go-open-service-broker-client/v2"
 	"github.com/pmorie/osb-broker-lib/pkg/broker"
+
+	// use postgresql
+	_ "github.com/lib/pq"
 )
 
 const (
@@ -91,6 +93,7 @@ func InitRecorder() error {
 	return nil
 }
 
+// Recorder struct
 type Recorder struct {
 	Cli *sql.DB
 
