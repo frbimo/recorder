@@ -53,7 +53,7 @@ func retryConnection(db *sql.DB) {
 		for {
 			select {
 			case <-timer.C:
-				os.Exit(1)
+				glog.Fatal("failed to establish connection")
 			case <-done:
 				return
 			}
@@ -66,7 +66,7 @@ func retryConnection(db *sql.DB) {
 		i++
 
 		time.Sleep(time.Second * 5)
-		glog.Errorf("%s\t, reconnecting ... [%d]", err.Error(), i)
+		glog.Errorf("%s, reconnecting ... [%d]", err.Error(), i)
 		err = db.Ping()
 	}
 	done <- true
