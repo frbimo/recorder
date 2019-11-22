@@ -142,7 +142,7 @@ func (r *Recorder) OnProvision(fn ObjectProvision) ObjectProvision {
 		}
 
 		if id == request.InstanceID && status == statusExist {
-			errString := errToString(InstanceIDInUse)
+			errString := errToString(fmt.Errorf(InstanceIDInUse))
 			return nil, osb.HTTPStatusCodeError{
 				StatusCode:   http.StatusConflict,
 				ErrorMessage: &errString,
@@ -252,7 +252,7 @@ func (r *Recorder) OnDeprovision(fn ObjectDeprovision) ObjectDeprovision {
 			request.InstanceID).Scan(&id, &status)
 
 		if id == request.InstanceID && status == statusDeleted || id != request.InstanceID {
-			errString := errToString(InstanceIDNotFound)
+			errString := errToString(fmt.Errorf(InstanceIDNotFound))
 			return nil, osb.HTTPStatusCodeError{
 				StatusCode:   http.StatusNotFound,
 				ErrorMessage: &errString,
@@ -346,7 +346,7 @@ func (r *Recorder) OnBind(fn ObjectBind) ObjectBind {
 			request.InstanceID).Scan(&pid, &id, &status)
 
 		if id == request.InstanceID && status == statusDeleted || id != request.InstanceID {
-			errString := errToString(InstanceIDNotFound)
+			errString := errToString(fmt.Errorf(InstanceIDNotFound))
 			return nil, osb.HTTPStatusCodeError{
 				StatusCode:   http.StatusGone,
 				ErrorMessage: &errString,
@@ -357,7 +357,7 @@ func (r *Recorder) OnBind(fn ObjectBind) ObjectBind {
 		r.Cli.QueryRow(`SELECT binding_id, binding_status FROM share_binding where binding_id = $1`,
 			request.BindingID).Scan(&bindID, &bindStatus)
 		if bindID == request.BindingID && bindStatus == statusExist {
-			errString := errToString(fmt.Sprint("BindingID in use"))
+			errString := errToString(fmt.Errorf("BindingID in use"))
 			return nil, osb.HTTPStatusCodeError{
 				StatusCode:   http.StatusConflict,
 				ErrorMessage: &errString,
@@ -423,7 +423,7 @@ func (r *Recorder) OnBind(fn ObjectBind) ObjectBind {
 			_, err := r.Cli.Exec(`INSERT INTO share_binding (share_instance_pid, binding_id, binding_time, binding_status) VALUES($1, $2, $3, $4)`,
 				pid, request.BindingID, time.Now(), statusExist)
 			if err != nil {
-				errString := errToString(InstanceIDNotFound)
+				errString := errToString(fmt.Errorf(InstanceIDNotFound))
 				return nil, osb.HTTPStatusCodeError{
 					StatusCode:   http.StatusInternalServerError,
 					ErrorMessage: &errString,
@@ -468,7 +468,7 @@ func (r *Recorder) OnUnbind(fn ObjectUnbind) ObjectUnbind {
 			request.BindingID).Scan(&bindID, &bindStatus)
 
 		if bindID == request.BindingID && bindStatus == statusDeleted {
-			errToString(fmt.Sprint("Already Unbinded"))
+			errToString(fmt.Errorf("Already Unbinded"))
 
 			// It should pass by design
 			// errString := fmt.Sprint("Already Unbinded")
@@ -563,7 +563,7 @@ func createURI(DatabaseName string) string {
 	return fmt.Sprintf("postgres://%s%s:%s/%s?sslmode=disable", cred, host1, port1, DatabaseName)
 }
 
-func errToString(e interface{}) string {
+func errToString(e error) string {
 	glog.Error(e)
-	return e.(string)
+	return e.Error()
 }
