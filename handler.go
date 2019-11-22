@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	DatabaseName = "mongodb"
+	databaseName = "mongodb"
 	planName     = "Shared"
 
 	statusDeleted = "delete"

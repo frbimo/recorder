@@ -27,8 +27,11 @@ const (
 // CheckConnection do check connection on ops database before all process begin
 func CheckConnection() error {
 	glog.V(2).Info("Checking database connection ...")
-	uri := createURI(DatabaseName)
-	db, _ := sql.Open("postgres", uri)
+	uri := createURI(databaseName)
+	db, err := sql.Open("postgres", uri)
+	if err != nil {
+		glog.Fatal(err)
+	}
 	defer db.Close()
 
 	if err := db.Ping(); err != nil {
@@ -64,7 +67,6 @@ func retryConnection(db *sql.DB) {
 
 		time.Sleep(time.Second * 5)
 		glog.Errorf("%s\n\t, reconnecting ... \v[%d]", err.Error(), i)
-		glog.Error(osb.HTTPStatusCodeError{})
 		err = db.Ping()
 	}
 	done <- true
@@ -81,7 +83,7 @@ func initDatabase() {
 
 // InitRecorder does init on recorder
 func InitRecorder() error {
-	uri := createURI(DatabaseName)
+	uri := createURI(databaseName)
 	db, err := sql.Open("postgres", uri)
 	if err == nil {
 		var check string
@@ -112,7 +114,7 @@ type cred struct {
 // New initiate connection
 func New() *Recorder {
 
-	uri := createURI(DatabaseName)
+	uri := createURI(databaseName)
 	db, err := sql.Open("postgres", uri)
 	if err != nil {
 		glog.Error(err)
