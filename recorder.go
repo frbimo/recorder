@@ -132,7 +132,7 @@ func (r *Recorder) OnProvision(fn ObjectProvision) ObjectProvision {
 		// Check instance_id and instance_status to see if instance already exists
 		if e := r.Cli.QueryRow(`SELECT instances_id, instance_status FROM share_instance where instances_id = $1`,
 			request.InstanceID).Scan(&id, &status); e != nil {
-			if e == sql.ErrNoRows {
+			if e != sql.ErrNoRows {
 				errString := errToString(e)
 				return nil, osb.HTTPStatusCodeError{
 					StatusCode:   http.StatusInternalServerError,
