@@ -18,10 +18,10 @@ import (
 
 const (
 	// InstanceIDInUse declared if requested instance ID is exist in ops database.
-	InstanceIDInUse = "InstanceID in use"
+	InstanceIDInUse = "instance_id in use"
 
 	// InstanceIDNotFound declared if requested instance ID is exist in ops database.
-	InstanceIDNotFound = "InstanceID not found"
+	InstanceIDNotFound = "instance_id not found"
 )
 
 // CheckConnection do check connection on ops database before all process begin
@@ -135,7 +135,7 @@ func (r *Recorder) OnProvision(fn ObjectProvision) ObjectProvision {
 			if e != sql.ErrNoRows {
 				errString := errToString(e)
 				return nil, osb.HTTPStatusCodeError{
-					StatusCode:   http.StatusInternalServerError,
+					StatusCode:   http.StatusServiceUnavailable,
 					ErrorMessage: &errString,
 				}
 			}
@@ -194,7 +194,7 @@ func (r *Recorder) OnProvision(fn ObjectProvision) ObjectProvision {
 		if err != nil {
 			errString := errToString(err)
 			return nil, osb.HTTPStatusCodeError{
-				StatusCode:   http.StatusInternalServerError,
+				StatusCode:   http.StatusServiceUnavailable,
 				ErrorMessage: &errString,
 			}
 		}
@@ -211,7 +211,7 @@ func (r *Recorder) OnProvision(fn ObjectProvision) ObjectProvision {
 			if err != nil {
 				errString := errToString(err)
 				return nil, osb.HTTPStatusCodeError{
-					StatusCode:   http.StatusInternalServerError,
+					StatusCode:   http.StatusServiceUnavailable,
 					ErrorMessage: &errString,
 				}
 			}
@@ -225,7 +225,7 @@ func (r *Recorder) OnProvision(fn ObjectProvision) ObjectProvision {
 			if err != nil {
 				errString := errToString(err)
 				return nil, osb.HTTPStatusCodeError{
-					StatusCode:   http.StatusInternalServerError,
+					StatusCode:   http.StatusServiceUnavailable,
 					ErrorMessage: &errString,
 				}
 			}
@@ -252,11 +252,9 @@ func (r *Recorder) OnDeprovision(fn ObjectDeprovision) ObjectDeprovision {
 			request.InstanceID).Scan(&id, &status)
 
 		if id == request.InstanceID && status == statusDeleted || id != request.InstanceID {
-			errString := errToString(fmt.Errorf(InstanceIDNotFound))
-			return nil, osb.HTTPStatusCodeError{
-				StatusCode:   http.StatusNotFound,
-				ErrorMessage: &errString,
-			}
+			errToString(fmt.Errorf(InstanceIDNotFound))
+			return nil, nil
+
 		}
 
 		var uri *string
@@ -265,14 +263,13 @@ func (r *Recorder) OnDeprovision(fn ObjectDeprovision) ObjectDeprovision {
 		if e := r.Cli.QueryRow(`SELECT uri FROM credentials where shared_use = true LIMIT 1`).Scan(&uri); e != nil {
 			errString := errToString(e)
 			return nil, osb.HTTPStatusCodeError{
-				StatusCode:   http.StatusConflict,
+				StatusCode:   http.StatusServiceUnavailable,
 				ErrorMessage: &errString,
 			}
 		}
 
 		// Pass values to be callable by logic business to connect to target database based on information
 		// from ops db
-
 		go func() {
 			err := pubMsg(uri)
 			if err != nil {
@@ -302,7 +299,7 @@ func (r *Recorder) OnDeprovision(fn ObjectDeprovision) ObjectDeprovision {
 		if err != nil {
 			errString := errToString(err)
 			return nil, osb.HTTPStatusCodeError{
-				StatusCode:   http.StatusInternalServerError,
+				StatusCode:   http.StatusServiceUnavailable,
 				ErrorMessage: &errString,
 			}
 		}
@@ -317,7 +314,7 @@ func (r *Recorder) OnDeprovision(fn ObjectDeprovision) ObjectDeprovision {
 			if err != nil {
 				errString := errToString(err)
 				return nil, osb.HTTPStatusCodeError{
-					StatusCode:   http.StatusInternalServerError,
+					StatusCode:   http.StatusServiceUnavailable,
 					ErrorMessage: &errString,
 				}
 			}
@@ -357,7 +354,7 @@ func (r *Recorder) OnBind(fn ObjectBind) ObjectBind {
 		r.Cli.QueryRow(`SELECT binding_id, binding_status FROM share_binding where binding_id = $1`,
 			request.BindingID).Scan(&bindID, &bindStatus)
 		if bindID == request.BindingID && bindStatus == statusExist {
-			errString := errToString(fmt.Errorf("BindingID in use"))
+			errString := errToString(fmt.Errorf("binding_id in use"))
 			return nil, osb.HTTPStatusCodeError{
 				StatusCode:   http.StatusConflict,
 				ErrorMessage: &errString,
@@ -370,7 +367,7 @@ func (r *Recorder) OnBind(fn ObjectBind) ObjectBind {
 		if e := r.Cli.QueryRow(`SELECT  uri FROM credentials where shared_use = true LIMIT 1`).Scan(&uri); e != nil {
 			errString := errToString(e)
 			return nil, osb.HTTPStatusCodeError{
-				StatusCode:   http.StatusConflict,
+				StatusCode:   http.StatusServiceUnavailable,
 				ErrorMessage: &errString,
 			}
 		}
@@ -414,7 +411,7 @@ func (r *Recorder) OnBind(fn ObjectBind) ObjectBind {
 			if err != nil {
 				errString := errToString(err)
 				return nil, osb.HTTPStatusCodeError{
-					StatusCode:   http.StatusInternalServerError,
+					StatusCode:   http.StatusServiceUnavailable,
 					ErrorMessage: &errString,
 				}
 			}
@@ -425,7 +422,7 @@ func (r *Recorder) OnBind(fn ObjectBind) ObjectBind {
 			if err != nil {
 				errString := errToString(fmt.Errorf(InstanceIDNotFound))
 				return nil, osb.HTTPStatusCodeError{
-					StatusCode:   http.StatusInternalServerError,
+					StatusCode:   http.StatusServiceUnavailable,
 					ErrorMessage: &errString,
 				}
 			}
@@ -487,7 +484,7 @@ func (r *Recorder) OnUnbind(fn ObjectUnbind) ObjectUnbind {
 		if e := r.Cli.QueryRow(`SELECT uri FROM credentials where shared_use = true LIMIT 1`).Scan(&uri); e != nil {
 			errString := errToString(e)
 			return nil, osb.HTTPStatusCodeError{
-				StatusCode:   http.StatusConflict,
+				StatusCode:   http.StatusServiceUnavailable,
 				ErrorMessage: &errString,
 			}
 		}
@@ -531,7 +528,7 @@ func (r *Recorder) OnUnbind(fn ObjectUnbind) ObjectUnbind {
 				// errString := err.Error()
 				// glog.Error(err)
 				// return nil, osb.HTTPStatusCodeError{
-				// 	StatusCode:   http.StatusInternalServerError,
+				// 	StatusCode:   http.StatusServiceUnavailable,
 				// 	ErrorMessage: &errString,
 				// }
 				return nil, nil
