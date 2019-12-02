@@ -548,11 +548,11 @@ func (r *Recorder) OnUnbind(fn ObjectUnbind) ObjectUnbind {
 func createURI(DatabaseName string) string {
 	var cred string
 
-	host1 := os.Getenv("PG_HOST1")
-	port1 := os.Getenv("PG_PORT1")
+	host1 := os.Getenv("OPS_PG_HOST1")
+	port1 := os.Getenv("OPS_PG_PORT1")
 
-	username := os.Getenv("PG_USERNAME")
-	password := os.Getenv("PG_PASSWORD")
+	username := os.Getenv("OPS_PG_USERNAME")
+	password := os.Getenv("OPS_PG_PASSWORD")
 
 	if username != "" && password != "" {
 		cred = fmt.Sprintf("%s:%s@", username, password)

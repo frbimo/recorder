@@ -4,11 +4,13 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"strings"
 )
 
 var (
-	databaseName = "mongodb"
-	planName     = "Shared"
+	databaseName string
+
+	planName = "Shared"
 
 	statusDeleted = "delete"
 	statusExist   = "exist"
@@ -21,7 +23,7 @@ var (
 
 func syntaxPq() map[string]string {
 
-	stages["database"] = fmt.Sprint("CREATE DATABASE mongodb;")
+	stages["database"] = fmt.Sprint("CREATE DATABASE %s;", databaseName)
 
 	stages["credentials"] = fmt.Sprint(`CREATE TABLE IF NOT EXISTS credentials (
 		database_pid 			SERIAL  PRIMARY KEY	NOT NULL,
@@ -97,32 +99,56 @@ func initStages(db *sql.DB) error {
 }
 
 func initInsertion(db *sql.DB) error {
-	var cred string
+	var cred, uri string
+
+	databaseName := os.Getenv("DB_KIND")
+	databaseName = strings.ToLower(databaseName)
+
+	if strings.Contains(databaseName, "mongo") {
+		databaseName = "mongodb"
+	} else if strings.Contains(databaseName, "postgre") {
+		databaseName = "postgres"
+	} else {
+		return fmt.Errorf("cannot detect kind of DB")
+	}
 
 	pseudoID := os.Getenv("PSEUDO_ID")
 	shared := os.Getenv("SHARED_USE")
 	dbAuthz := os.Getenv("DATABASE")
 
-	host1 := os.Getenv("MONGODB_HOST1")
-	host2 := os.Getenv("MONGODB_HOST2")
-	host3 := os.Getenv("MONGODB_HOST3")
+	host1 := os.Getenv(fmt.Sprintf("%s_HOST1", strings.ToUpper(databaseName)))
+	host2 := os.Getenv(fmt.Sprintf("%s_HOST2", strings.ToUpper(databaseName)))
+	host3 := os.Getenv(fmt.Sprintf("%s_HOST3", strings.ToUpper(databaseName)))
 
-	port1 := os.Getenv("MONGODB_PORT1")
-	port2 := os.Getenv("MONGODB_PORT2")
-	port3 := os.Getenv("MONGODB_PORT3")
+	port1 := os.Getenv(fmt.Sprintf("%s_PORT1", strings.ToUpper(databaseName)))
+	port2 := os.Getenv(fmt.Sprintf("%s_PORT2", strings.ToUpper(databaseName)))
+	port3 := os.Getenv(fmt.Sprintf("%s_PORT3", strings.ToUpper(databaseName)))
 
-	username := os.Getenv("MONGODB_USERNAME")
-	password := os.Getenv("MONGODB_PASSWORD")
+	username := os.Getenv(fmt.Sprintf("%s_USERNAME", strings.ToUpper(databaseName)))
+	password := os.Getenv(fmt.Sprintf("%s_PASSWORD", strings.ToUpper(databaseName)))
 
 	if username != "" && password != "" {
 		cred = fmt.Sprintf("%s:%s@", username, password)
 	}
 
-	uri := fmt.Sprintf("mongodb://%s%s:%s,%s:%s,%s:%s/%s", cred, host1, port1, host2, port2, host3, port3, dbAuthz)
+	if !stringValidator(host1, host2, host3) && !stringValidator(port1, port2, port3) {
+		uri = fmt.Sprintf("%s://%s%s:%s/%s", databaseName, cred, host1, port1, dbAuthz)
+	} else {
+		uri = fmt.Sprintf("%s://%s%s:%s,%s:%s,%s:%s/%s", databaseName, cred, host1, port1, host2, port2, host3, port3, dbAuthz)
+	}
 
 	if _, err := db.Exec(fmt.Sprint(`INSERT INTO credentials (pseudo_id, shared_use, uri, username, password,
 		database) VALUES ($1, $2, $3, $4, $5, $6)`), pseudoID, shared, uri, username, password, dbAuthz); err != nil {
 		return err
 	}
 	return nil
+}
+
+func stringValidator(str ...string) bool {
+	for i := 0; i < len(str)-1; i++ {
+		if strings.Compare(str[i], str[i+1]) != 0 {
+			return true
+		}
+	}
+	return false
 }
