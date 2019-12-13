@@ -4,11 +4,14 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
 var (
 	databaseName string
+	dbAuthz      string
+	maxInstance  int
 
 	planName = "Shared"
 
@@ -23,53 +26,54 @@ var (
 
 func syntaxPq() map[string]string {
 
-	stages["database"] = fmt.Sprint("CREATE DATABASE %s;", databaseName)
+	stages["database"] = fmt.Sprintf("CREATE DATABASE %s;", databaseName)
 
 	stages["credentials"] = fmt.Sprint(`CREATE TABLE IF NOT EXISTS credentials (
-		database_pid 			SERIAL  PRIMARY KEY	NOT NULL,
+		database_pid 			SERIAL  PRIMARY KEY		NOT NULL,
 		pseudo_id	 			VARCHAR(50) 			NOT NULL,
-		shared_use 				BOOLEAN 			NOT NULL,
+		shared_use 				BOOLEAN 				NOT NULL,
 		uri 					VARCHAR(500),		
 		username 				VARCHAR(50),	
 		password 				VARCHAR(50),
-		database				VARCHAR(50)
+		database				VARCHAR(50),
+		env 					VARCHAR(50)
 		)`)
 
 	stages["ip"] = fmt.Sprint(`CREATE TABLE IF NOT EXISTS ip (
-			ip_id 					SERIAL  PRIMARY KEY				NOT NULL,
+			ip_id 					SERIAL  PRIMARY KEY								NOT NULL,
 			database_pid	 		SERIAL REFERENCES credentials(database_pid) 	NOT NULL,
-			internal_ip 			INET	 						NOT NULL,
+			internal_ip 			INET	 										NOT NULL,
 			public_ip 				INET,		
 			port 					INTEGER,	
 			in_use 					BOOLEAN	
 			)`)
 
 	stages["usage"] = fmt.Sprint(`CREATE TABLE IF NOT EXISTS usage (
-				usage_pid	 			SERIAL  PRIMARY KEY				NOT NULL,
+				usage_pid	 			SERIAL  PRIMARY KEY							NOT NULL,
 				database_pid			SERIAL REFERENCES credentials(database_pid)	NOT NULL,
-				cpu 					VARCHAR(16)						NOT NULL,
-				memory 					VARCHAR(16)						NOT NULL,
-				usage_calculate			VARCHAR(16)						NOT NULL
+				cpu 					VARCHAR(16)									NOT NULL,
+				memory 					VARCHAR(16)									NOT NULL,
+				usage_calculate			VARCHAR(16)									NOT NULL
 				)`)
 
 	stages["shareInstance"] = fmt.Sprint(`CREATE TABLE IF NOT EXISTS share_instance (
-					share_instance_pid 		SERIAL  PRIMARY KEY 			NOT NULL,
+					share_instance_pid 		SERIAL  PRIMARY KEY 						NOT NULL,
 					database_pid			SERIAL REFERENCES credentials(database_pid)	NOT NULL,
-					instances_id 			VARCHAR(50) 						NOT NULL,
-					plan_id 				VARCHAR(50) 						NOT NULL,
-					plan_name 				VARCHAR(50) 						NOT NULL,
-					org_id 					VARCHAR(50) 						NOT NULL,
-					spaces_id 				VARCHAR(50)						NOT NULL,
+					instances_id 			VARCHAR(50) 								NOT NULL,
+					plan_id 				VARCHAR(50) 								NOT NULL,
+					plan_name 				VARCHAR(50) 								NOT NULL,
+					org_id 					VARCHAR(50) 								NOT NULL,
+					spaces_id 				VARCHAR(50)									NOT NULL,
 					create_instance_time 	timestamptz,
 					delete_instance_time 	timestamptz,
 					instance_status			VARCHAR(16),
 					instance_parameters		VARCHAR(256) 
 				)`)
 	stages["shareBinding"] = fmt.Sprint(`CREATE TABLE IF NOT EXISTS share_binding (
-					share_binding_pid 		SERIAL  PRIMARY KEY					NOT NULL,
+					share_binding_pid 		SERIAL  PRIMARY KEY										NOT NULL,
 					share_instance_pid 		SERIAL REFERENCES share_instance(share_instance_pid)	NOT NULL,
-					binding_id 				VARCHAR(50) 							NOT NULL,
-					binding_time			timestamptz 	 							NOT NULL,
+					binding_id 				VARCHAR(50) 											NOT NULL,
+					binding_time			timestamptz 	 										NOT NULL,
 					binding_status			VARCHAR(16),
 					unbinding_time 			timestamptz, 		
 					binding_parameters		VARCHAR(256) 			
@@ -114,7 +118,9 @@ func initInsertion(db *sql.DB) error {
 
 	pseudoID := os.Getenv("PSEUDO_ID")
 	shared := os.Getenv("SHARED_USE")
-	dbAuthz := os.Getenv("DATABASE")
+	dbAuthz = os.Getenv("DATABASE")
+
+	maxInstance, _ = strconv.Atoi(os.Getenv("MAX_INSTANCE_PER_DB"))
 
 	host1 := os.Getenv(fmt.Sprintf("%s_HOST1", strings.ToUpper(databaseName)))
 	host2 := os.Getenv(fmt.Sprintf("%s_HOST2", strings.ToUpper(databaseName)))

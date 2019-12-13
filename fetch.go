@@ -12,7 +12,6 @@ var (
 
 // FetchURL will fetch list target database url from ops database
 func FetchURL() (string, error) {
-
 	uri, ok := <-msg
 	if !ok || uri == "error" {
 		return "", errors.New("message is nil")

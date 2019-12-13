@@ -4,7 +4,6 @@
 
 Recorder is a library for store ops log into ops database for adv. 
 
-
 ## Example: How to integrate service broker function with Recorder
 
 ### Your logic function
@@ -62,3 +61,26 @@ func (b *BrokerLogic) Provision(request *osb.ProvisionRequest, c *broker.Request
     return resp, nil
 }
 ```
+<!-- 
+Check location first to find URI
+If not found return 507
+ -->
+<!-- set limit ENV for limit instance default is 40. 41 return 507-->
+--------------------
+<!-- Check DB 1 by 1, not random -->
+<!-- DBs:=[]string{"a","b","c"} -->
+<!-- recorder will check a to c until found a vacant db, if not return 507-->
+---------------------
+<!-- 30 days can be set from ENV -->
+<!-- each days query @4 o'clock -->
+--------------------
+<!-- if instance+id is the samee and space_id is not the same return 409 -->
+<!-- if instance id and space is the same return 201 -->
+if the same
+
+max_days_dbdb
+DATACENTER
+<!-- empty ENV has uri, so we can query based on ENV -->
+if query bsaed on env return empty, return 507
+
+--------------------
