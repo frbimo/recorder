@@ -1,6 +1,7 @@
 package recorder
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -26,6 +27,9 @@ const (
 
 // CheckConnection do check connection on ops database before all process begin
 func CheckConnection() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	glog.V(2).Info("Checking database connection ...")
 	uri := createURI(databaseName)
 	db, err := sql.Open("postgres", uri)
@@ -34,12 +38,13 @@ func CheckConnection() error {
 	}
 	defer db.Close()
 
-	if err := db.Ping(); err != nil {
-
+	if err := db.PingContext(ctx); err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
 			initDatabase()
 		} else if strings.Contains(err.Error(), "connect: connection refused") {
 			retryConnection(db)
+		} else {
+			glog.Fatal(err)
 		}
 	}
 	return nil
@@ -114,10 +119,11 @@ type cred struct {
 // New initiate connection
 func New() *Recorder {
 	uri := createURI(databaseName)
-	db, err := sql.Open(dbAuthz, uri)
+	db, err := sql.Open("postgres", uri)
 	if err != nil {
 		glog.Error(err)
 	}
+	db.Ping()
 	return &Recorder{Cli: db}
 }
 
